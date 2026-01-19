@@ -1,0 +1,7 @@
+server:
+  port: "8080"      # 我们服务监听的端口
+  mode: "debug"     # 开发模式（报错会显示详细信息），上线后改为 release
+
+log:
+  level: "info"     # 日志级别：debug < info < warn < error
+  encoding: "console" # 输出格式：console (也就是给人看的彩色字) 或 json (给机器看的)
