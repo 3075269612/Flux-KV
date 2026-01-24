@@ -62,11 +62,18 @@ func (c *Client) sendRequest(msg string) (string, error) {
 		}
 	}
 
+	// 🔍 观察点 1: SDK 接到了老板的命令
+    fmt.Printf("\n[Client] 1. 收到命令: %q\n", msg)
+
 	// 2. 封包（Encode）
 	data, err := protocol.Encode(msg)
 	if err != nil {
 		return "", err
 	}
+
+	// 🔍 观察点 2: 秘书把命令打包成了字节流（二进制）
+    // %v 会打印出 byte 的数字，比如 [0 0 0 5 ...]
+    fmt.Printf("[Client] 2. 封包完成，准备发送字节流: %v\n", data)
 
 	// 3. 发送
 	_, err = c.conn.Write(data)

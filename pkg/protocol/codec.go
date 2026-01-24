@@ -3,6 +3,7 @@ package protocol
 import (
 	"encoding/binary"
 	"io"
+	"fmt"
 )
 
 // Encode 打包
@@ -16,6 +17,10 @@ func Encode(message string) ([]byte, error) {
 
 	// 3. 将长度值写入前4字节（大端序，符合网络传输标准）
 	binary.BigEndian.PutUint32(pkg[:4], length)
+
+	// 🔍 观察点 3: 看看 Header 里装的是什么
+    // 这里的 header 应该是 4个字节，代表了 body 的长度
+    fmt.Printf("  -> [Protocol] 正在封包: Body长度=%d, Header字节=%v\n", length, pkg[:4])
 
 	// 4. 把原始消息复制到长度头之后的位置
 	copy(pkg[4:], []byte(message))

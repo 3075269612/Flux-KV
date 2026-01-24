@@ -63,8 +63,14 @@ func (s *Server) handleConnection(conn net.Conn) {
 			return	// 退出循环，结束当前连接的处理
 		}
 
+		// 🔍 观察点 4: 服务端收到了完整的数据包
+        fmt.Printf("[Server] 3. 收到并拆包成功: %q\n", request)
+
 		// 2. 执行命令：解析并操作数据库
 		response := s.executeCommand(request)
+
+		// 🔍 观察点 5: 数据库操作完成，准备回复
+        fmt.Printf("[Server] 4. 执行完毕，结果: %q. 准备发回客户端...\n", response)
 		
 		// 3. 打包+发送响应
 		responseData, err := Encode(response)
