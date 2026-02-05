@@ -2,12 +2,17 @@
 
 这是一个高性能的分布式 KV 存储系统与微服务网关项目，集成了 Go 语言核心特性与云原生技术栈。
 
-本项目是 [35天 Golang 后端 + AI Agent 全栈突击计划](PLAN.md) 的实战成果。
+本项目是 [35天 Golang 后端架构师计划](PLAN.md) 的实战成果，旨在构建一个高并发、强一致性、工业级的分布式 KV 存储与网关系统。
 
 ## 🚀 功能特性
 
 ### 分布式 KV 存储
-- **高性能存储**: 基于 sync.RWMutex 的线程安全 Map，支持 KV 读写。
+- **高性能存储**: 
+  - [x] 基于 sync.RWMutex 的基础存储
+  - [ ] **分片锁 (Sharded Map) 优化 (Phase 3)**: 降低高并发写冲突
+- **事件驱动架构 (Phase 3)**:
+  - [ ] **CDC (Change Data Capture)**: 实时数据变更流
+  - [ ] **RabbitMQ 集成**: 异步解耦与削峰填谷
 - **持久化**: 支持 AOF (Append Only File) 持久化与启动恢复。
 - **过期机制**: 实现 Lazy + Active 混合过期清理策略。
 - **通信协议**: 自定义 TCP 协议（解决粘包问题）与 gRPC 接口支持。
@@ -21,6 +26,9 @@
   - 熔断降级 (Hystrix)
   - 负载均衡 (RoundRobin)
   - 防缓存击穿 (SingleFlight)
+- **工程化 (Phase 3)**:
+  - [ ] 优雅启停 (Graceful Shutdown)
+  - [ ] Docker Compose 全栈容器化编排
 - **可观测性**: 集成 OpenTelemetry/Jaeger 链路追踪与 Prometheus 指标监控。
 
 ## 🛠️ 快速开始
