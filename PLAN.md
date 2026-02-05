@@ -43,7 +43,7 @@
 
 [x] Day 16: [高可用] 熔断降级 (Hystrix 状态机实现) ✅
 
-[ ] Day 17: [负载均衡] 结合 Day 9 的 Etcd 实现 RoundRobin/Hash 策略
+[x] Day 17: [负载均衡] 结合 Day 9 的 Etcd 实现 RoundRobin 策略 (Discovery Watch + Client Pool) ✅
 
 [ ] Day 18: [防击穿] SingleFlight 模式实现 —— 高并发杀手锏
 

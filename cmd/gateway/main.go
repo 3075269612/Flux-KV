@@ -4,6 +4,7 @@ import (
 	"Go-AI-KV-System/internal/gateway/handler"
 	"Go-AI-KV-System/internal/gateway/router"
 	"Go-AI-KV-System/pkg/client"
+	"Go-AI-KV-System/pkg/discovery"
 	"Go-AI-KV-System/pkg/logger"
 	"Go-AI-KV-System/pkg/tracer"
 	"context"
@@ -23,7 +24,8 @@ func main() {
 	// 1. 初始化配置
 	viper.SetDefault("server.mode", "debug")        // 默认开发模式
 	viper.SetDefault("server.port", "8080")         // 默认端口
-	viper.SetDefault("rpc.addr", "127.0.0.1:50051") // gRPC 服务端地址配置 (使用 IPv4 避免 localhost 解析延迟)
+	viper.SetDefault("etcd.endpoints", []string{"localhost:2379"})
+	viper.SetDefault("rpc.service_name", "kv-service")
 
 	// 2. 初始化日志
 	logger.InitLogger()
@@ -48,17 +50,28 @@ func main() {
 	// 3. 设置 Gin 的运行模式
 	gin.SetMode(viper.GetString("server.mode"))
 
-	// 新增：gRPC Client 连接逻辑
-	rpcAddr := viper.GetString("rpc.addr")
-	log.Info("🔗 Connecting to gRPC Server...", zap.String("addr", rpcAddr))
+	// Day 17 新增：服务发现与负载均衡链接逻辑
+	// A. 连接 Etcd
+	etcdEndpoints := viper.GetStringSlice("etcd.endpoints")
+	log.Info("🔍 Connecting to Etcd...", zap.Strings("endpoints", etcdEndpoints))
 
-	// 初始化 gRPC 客户端
-	kvClient, err := client.NewClient(rpcAddr)
+	disco, err := discovery.NewDiscovery(etcdEndpoints)
 	if err != nil {
-		log.Fatal("❌ Failed to connect to KV Server", zap.Error(err))
+		log.Fatal("❌ Failed to connect to Etcd", zap.Error(err))
+	}
+	defer disco.Close()	// 退出时关闭 Etcd 连接
+
+	// B. 初始化支持负载均衡的 gRPC Client
+	serviceName := viper.GetString("rpc.service_name")
+	log.Info("🔗 Initializing KV Client (Load Balanced)...", zap.String("service", serviceName))
+
+	// 注意：这里传入 discovery 实例和服务名，不再是具体的 IP
+	kvClient, err := client.NewClient(disco, serviceName)
+	if err != nil {
+		log.Fatal("❌ Failed to init KV client", zap.Error(err))
 	}
 	defer func() {
-		log.Info("🔌 Closing gRPC connection...")
+		log.Info("🔌 Closing gRPC client connections...")
 		if err := kvClient.Close(); err != nil {
 			log.Error("Failed to close gRPC connection", zap.Error(err))
 		}
