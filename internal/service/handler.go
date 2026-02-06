@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"Go-AI-KV-System/internal/core"
-	pb "Go-AI-KV-System/api/proto"
+	"Flux-KV/internal/core"
+	pb "Flux-KV/api/proto"
 )
 
 // 定义服务结构体

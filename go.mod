@@ -1,4 +1,4 @@
-module Go-AI-KV-System
+module Flux-KV
 
 go 1.24.0
 

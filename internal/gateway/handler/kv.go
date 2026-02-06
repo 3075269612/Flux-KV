@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"Go-AI-KV-System/pkg/client"
+	"Flux-KV/pkg/client"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

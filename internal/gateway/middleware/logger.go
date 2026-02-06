@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"Go-AI-KV-System/pkg/logger"
+	"Flux-KV/pkg/logger"
 	"time"
 
 	"github.com/gin-gonic/gin"

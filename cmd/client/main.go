@@ -1,9 +1,9 @@
 package main
 
 import (
-	"Go-AI-KV-System/pkg/client"
-	"Go-AI-KV-System/pkg/consistent"
-	"Go-AI-KV-System/pkg/discovery"
+	"Flux-KV/pkg/client"
+	"Flux-KV/pkg/consistent"
+	"Flux-KV/pkg/discovery"
 	"bufio"
 	"flag"
 	"fmt"

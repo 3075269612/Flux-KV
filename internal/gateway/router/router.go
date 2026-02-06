@@ -1,8 +1,8 @@
 package router
 
 import (
-	"Go-AI-KV-System/internal/gateway/handler"
-	"Go-AI-KV-System/internal/gateway/middleware"
+	"Flux-KV/internal/gateway/handler"
+	"Flux-KV/internal/gateway/middleware"
 
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"

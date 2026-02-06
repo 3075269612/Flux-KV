@@ -1,7 +1,7 @@
 🚀 35天 Golang 后端架构师计划 
 
 🎯 核心目标
-项目: 分布式 KV 存储 + 高性能微服务网关 + CDC 实时数据流架构
+项目: Flux-KV (分布式 KV 存储 + 高性能微服务网关 + CDC 实时数据流架构)
 
 技术栈: Golang (GMP/Channel), gRPC, Etcd, RabbitMQ, Docker, OpenTelemetry
 
@@ -51,7 +51,7 @@
 
 🗺️ 阶段三：工程化完善与架构演进 (Day 21-30) 🔥 核心升级
 
-[ ] Day 21: [存储引擎] 锁竞争优化 (Sharded Map) —— 手写 FNV 哈希分片锁替代 sync.Map，大幅降低高并发写场景下的锁粒度冲突。
+[x] Day 21: [存储引擎] 锁竞争优化 (Sharded Map) —— 手写 FNV 哈希分片锁替代 sync.Map，大幅降低高并发写场景下的锁粒度冲突。 ✅
 
 [ ] Day 22: [中间件] RabbitMQ 与事件总线 (EventBus) —— 搭建基础设置，在 KV 内部实现基于 Channel 的 EventBus 解耦业务逻辑与消息发送。
 

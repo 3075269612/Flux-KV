@@ -1,8 +1,8 @@
 package protocol
 
 import (
-	"Go-AI-KV-System/internal/config"
-	"Go-AI-KV-System/internal/core"
+	"Flux-KV/internal/config"
+	"Flux-KV/internal/core"
 	"net"
 	"testing"
 	"time"

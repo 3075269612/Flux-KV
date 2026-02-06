@@ -1,7 +1,7 @@
 package protocol
 
 import (
-	"Go-AI-KV-System/internal/core"
+	"Flux-KV/internal/core"
 	"fmt"
 	"io"
 	"log"

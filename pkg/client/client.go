@@ -1,8 +1,8 @@
 package client
 
 import (
-	pb "Go-AI-KV-System/api/proto"
-	"Go-AI-KV-System/pkg/discovery"
+	pb "Flux-KV/api/proto"
+	"Flux-KV/pkg/discovery"
 	"context"
 	"errors"
 	"log"

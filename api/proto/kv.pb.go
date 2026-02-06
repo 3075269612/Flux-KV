@@ -326,7 +326,7 @@ const file_api_proto_kv_proto_rawDesc = "" +
 	"\tKVService\x120\n" +
 	"\x03Set\x12\x13.service.SetRequest\x1a\x14.service.SetResponse\x120\n" +
 	"\x03Get\x12\x13.service.GetRequest\x1a\x14.service.GetResponse\x120\n" +
-	"\x03Del\x12\x13.service.DelRequest\x1a\x14.service.DelResponseB#Z!Go-AI-KV-System/api/proto;serviceb\x06proto3"
+	"\x03Del\x12\x13.service.DelRequest\x1a\x14.service.DelResponseB#Z!Flux-KV/api/proto;serviceb\x06proto3"
 
 var (
 	file_api_proto_kv_proto_rawDescOnce sync.Once

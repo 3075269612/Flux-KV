@@ -1,12 +1,12 @@
 package main
 
 import (
-	"Go-AI-KV-System/internal/gateway/handler"
-	"Go-AI-KV-System/internal/gateway/router"
-	"Go-AI-KV-System/pkg/client"
-	"Go-AI-KV-System/pkg/discovery"
-	"Go-AI-KV-System/pkg/logger"
-	"Go-AI-KV-System/pkg/tracer"
+	"Flux-KV/internal/gateway/handler"
+	"Flux-KV/internal/gateway/router"
+	"Flux-KV/pkg/client"
+	"Flux-KV/pkg/discovery"
+	"Flux-KV/pkg/logger"
+	"Flux-KV/pkg/tracer"
 	"context"
 	"errors"
 	"net/http"
