@@ -53,7 +53,7 @@
 
 [x] Day 21: [存储引擎] 锁竞争优化 (Sharded Map) —— 手写 FNV 哈希分片锁替代 sync.Map，大幅降低高并发写场景下的锁粒度冲突。 ✅
 
-[ ] Day 22: [中间件] RabbitMQ 与事件总线 (EventBus) —— 搭建基础设置，在 KV 内部实现基于 Channel 的 EventBus 解耦业务逻辑与消息发送。
+[x] Day 22: [中间件] RabbitMQ 与事件总线 (EventBus) —— 搭建基础设置，在 KV 内部实现基于 Channel 的 EventBus 解耦业务逻辑与消息发送。 ✅
 
 [ ] Day 23: [架构模式] CDC 数据变更流 (Change Data Capture) —— 改造 Set/Del 操作，在落盘后异步分发变更事件，实现 "Fire-and-Forget" 模式，确保主流程低延迟。
 

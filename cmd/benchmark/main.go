@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -39,8 +38,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("无法连接 Etcd: %v", err)
 	}
-	// 监听节点上下线
-	err = d.WatchService("/kv-service/", func(k, v string) {
+	// 监听节点上下线（与服务器注册的前缀保持一致）
+	err = d.WatchService("/services/kv-service/", func(k, v string) {
 		clientsMu.Lock()
 		defer clientsMu.Unlock()
 		addr := v
@@ -53,9 +52,8 @@ func main() {
 	}, func(k, v string) {
 		clientsMu.Lock()
 		defer clientsMu.Unlock()
-		// 从 k 解析出地址
-		parts := strings.Split(k, "/")
-		addr := parts[len(parts)-1]
+		// v 就是地址，直接使用
+		addr := v
 		if cli, ok := clients[addr]; ok {
 			cli.Close()
 			delete(clients, addr)

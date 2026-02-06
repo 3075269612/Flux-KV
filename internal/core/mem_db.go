@@ -3,6 +3,7 @@ package core
 import (
 	"Flux-KV/internal/aof"
 	"Flux-KV/internal/config"
+	"Flux-KV/internal/event"
 	"log"
 	"sync"
 	"time"
@@ -25,9 +26,9 @@ type shard struct {
 
 // MemDB 内存数据库核心结构
 type MemDB struct {
-	shards []*shard
-
-	aofHandler *aof.AofHandler // 新增：持有AOF操作对象
+	shards     []*shard
+	aofHandler *aof.AofHandler // 持有AOF操作对象
+	eventBus   *event.EventBus // 持有 EventBus 指针
 }
 
 // 实现 FNV-1a 哈希算法
@@ -61,6 +62,23 @@ func NewMemDB(cfg *config.Config) *MemDB {
 		db.shards[i] = &shard{
 			data: make(map[string]*Item),
 		}
+	}
+
+	// 【修改部分】初始化 RabbitMQ EventBus
+	mqURL := "amqp://guest:guest@localhost:5672/"
+	// (在生产环境，这个 URL 应该从 cfg 配置里读，今天先硬编码)
+
+	// 初始化并启动 EventBus
+	// 缓冲区设为 10000，足够应对瞬间的并发洪峰
+	bus, err := event.NewEventBus(10000, mqURL)
+	if err != nil {
+		// 如果 MQ 连不上，你可以选择 panic，或者降级运行
+		log.Printf("⚠️ [Warning] Failed to connect RabbitMQ: %v, EventBus disabled.", err)
+		// 如果连不上，db.eventBus 就是 nil，Publish 的时候要判空
+	} else {
+		db.eventBus = bus
+		db.eventBus.StartConsumer()
+		log.Println("🔌 RabbitMQ connected success!")
 	}
 
 	// 初始化 AOF 模块
@@ -133,6 +151,15 @@ func (db *MemDB) Set(key string, val any, ttl time.Duration) {
 		}
 		_ = db.aofHandler.Write(cmd)
 	}
+
+	// 4. 投递事件到 EventBus
+	if db.eventBus != nil {
+		db.eventBus.Publish(event.Event{
+			Type:  event.EventSet,
+			Key:   key,
+			Value: val,
+		})
+	}
 }
 
 // Get 获取数据（实现惰性删除）
@@ -179,10 +206,9 @@ func (db *MemDB) Del(key string) {
 	s := db.getShard(key)
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	// 删内存
 	delete(s.data, key)
+	s.mu.Unlock()
 
 	// 写 AOF
 	if db.aofHandler != nil {
@@ -191,6 +217,14 @@ func (db *MemDB) Del(key string) {
 			Key:  key,
 		}
 		_ = db.aofHandler.Write(cmd)
+	}
+
+	// 投递删除事件
+	if db.eventBus != nil {
+		db.eventBus.Publish(event.Event{
+			Type: event.EventDel,
+			Key:  key,
+		})
 	}
 }
 

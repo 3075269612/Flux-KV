@@ -56,15 +56,11 @@ func main() {
 	}
 
 	// 定义回调：当节点下线时
-	removeNode := func(key, value string) {
+	removeNode := func(key, addr string) {
 		mu.Lock()
 		defer mu.Unlock()
 
-		// 从 key 解析地址
-		parts := strings.Split(key, "/")
-		addr := parts[len(parts)-1]
-
-		// 关闭连接并清理
+		// 关闭连接并清理（addr 就是 value，直接使用）
 		if cli, exists := clients[addr]; exists {
 			cli.Close()
 			delete(clients, addr)
@@ -73,8 +69,8 @@ func main() {
 		}
 	}
 
-	// 开始监听 /kv-service/ 前缀
-	err = d.WatchService("/kv-service/", addNode, removeNode)
+	// 开始监听 /services/kv-service/ 前缀（与服务器注册的前缀保持一致）
+	err = d.WatchService("/services/kv-service/", addNode, removeNode)
 	if err != nil {
 		log.Fatalf("❌ 监听服务失败: %v", err)
 	}
