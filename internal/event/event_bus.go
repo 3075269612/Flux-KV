@@ -33,6 +33,7 @@ type EventBus struct {
 	rabbitCh     *amqp.Channel
 	exchangeName string
 	mu           sync.Mutex // 保护日志输出的同步
+	wg           sync.WaitGroup	// 等待消费者协程结束
 }
 
 // NewEventBus 初始化传送带
@@ -89,7 +90,10 @@ func (b *EventBus) Publish(e Event) {
 
 // StartConsumer 启动消费者
 func (b *EventBus) StartConsumer() {
+	b.wg.Add(1)
 	go func() {
+		defer b.wg.Done()
+
 		// 监听 Go Channel
 		for e := range b.ch {
 			// 1. 序列化消息（转成 JSON）
@@ -100,17 +104,17 @@ func (b *EventBus) StartConsumer() {
 			}
 
 			// 2. 发送到 RabbitMQ
-			ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			err = b.rabbitCh.PublishWithContext(ctx,
-			b.exchangeName, 	// exchange
-			"",	// routing key
-			false,	// mandatory
-			false,	// immediate
-			amqp.Publishing{
-				ContentType: "application/json",
-				Body: body,
-				Timestamp: time.Now(),
-			})
+				b.exchangeName, // exchange
+				"",             // routing key
+				false,          // mandatory
+				false,          // immediate
+				amqp.Publishing{
+					ContentType: "application/json",
+					Body:        body,
+					Timestamp:   time.Now(),
+				})
 			cancel()
 
 			if err != nil {
@@ -119,17 +123,27 @@ func (b *EventBus) StartConsumer() {
 				log.Printf("✅ [RabbitMQ] Pushed: %s %s", opStr(e.Type), e.Key)
 			}
 		}
+		log.Println("[EventBus] Internal consumer stopped.")
 	}()
 }
 
 // Close 优雅关闭
-func (b *EventBus) Close() {
+func (b *EventBus) Close() error {
+	// 1. 关闭 Go Channal
+	close(b.ch)
+
+	// 2. 等待消费者协程把缓冲区数据全部发给 RabbitMQ
+	log.Println("[EventBus] Waiting for buffer to drain...")
+	b.wg.Wait()
+
+	// 3. 安全关闭 RabbitMQ 资源
 	if b.rabbitCh != nil {
 		b.rabbitCh.Close()
 	}
 	if b.rabbitConn != nil {
-		b.rabbitConn.Close()
+		return b.rabbitConn.Close()
 	}
+	return nil
 }
 
 func opStr(t EventType) string {

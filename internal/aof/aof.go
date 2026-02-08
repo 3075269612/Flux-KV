@@ -102,5 +102,11 @@ func (handler *AofHandler) ReadAll() ([]Cmd, error) {
 func (handler *AofHandler) Close() error {
 	handler.mu.Lock()
 	defer handler.mu.Unlock()
+
+	// 强制刷盘
+	if err := handler.file.Sync(); err != nil {
+		return err
+	}
+	
 	return handler.file.Close()
 }

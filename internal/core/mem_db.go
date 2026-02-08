@@ -4,6 +4,7 @@ import (
 	"Flux-KV/internal/aof"
 	"Flux-KV/internal/config"
 	"Flux-KV/internal/event"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -228,11 +229,28 @@ func (db *MemDB) Del(key string) {
 	}
 }
 
-// 关闭数据库
-func (db *MemDB) Close() {
-	if db.aofHandler != nil {
-		_ = db.aofHandler.Close()
+// 优雅关闭数据库
+func (db *MemDB) Close() error {
+	var errs []error
+
+	// 1. 关闭 EventBus
+	if db.eventBus != nil {
+		if err := db.eventBus.Close(); err != nil {
+			errs = append(errs, err)
+		}
 	}
+
+	// 2. 关闭 AOF
+	if db.aofHandler != nil {
+		if err := db.aofHandler.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("close errors: %v", errs)
+	}
+	return nil
 }
 
 // StartGC 启动定期清理（Garbage Collection）

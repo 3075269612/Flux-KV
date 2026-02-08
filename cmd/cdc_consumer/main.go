@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -27,20 +28,19 @@ type Event struct {
 
 const (
 	ExchangeName = "flux_kv_events"
-	QueueName = "flux_cdc_file_logger"
-	LogFileName = "flux_cdc.log"
-	AmqpURL = "amqp://guest:guest@localhost:5672/"
+	QueueName    = "flux_cdc_file_logger"
+	LogFileName  = "flux_cdc.log"
+	AmqpURL      = "amqp://guest:guest@localhost:5672/"
+	ConsumerTag  = "flux-cdc-consumer-1"
 )
 
 func main() {
 	// 1. 连接 RabbitMQ (建立连接 + 打开通道)
 	conn, err := amqp.Dial(AmqpURL)
 	failOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
 
 	ch, err := conn.Channel()
 	failOnError(err, "Failed to open a channel")
-	defer ch.Close()
 
 	// 2. 声明交换机
 	err = ch.ExchangeDeclare(
@@ -74,8 +74,8 @@ func main() {
 	// 5. 注册消费者
 	msgs, err := ch.Consume(
 		q.Name,
-		"",
-		true,	// 自动确认消息
+		ConsumerTag,
+		false, // 手动确认消息
 		false,
 		false,
 		false,
@@ -86,17 +86,21 @@ func main() {
 	// 6. 打开日志文件
 	logFile, err := os.OpenFile(LogFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	failOnError(err, "Failed to open log file")
-	defer logFile.Close()
 
 	log.Printf("[*] Waiting for CDC events. To exit press CTRL+C")
 
 	// 7. 处理消息循环
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	go func() {
+		defer wg.Done()
 		for d := range msgs {
 			var event Event
 			// 反序列化 JSON 消息体
 			if err := json.Unmarshal(d.Body, &event); err != nil {
 				log.Printf("Error decoding JSON: %s", err)
+				d.Ack(false)
 				continue
 			}
 
@@ -106,18 +110,44 @@ func main() {
 				eventTime = time.Now()
 			}
 
-			processEvent(logFile, event, eventTime)
+			if err := processEvent(logFile, event, eventTime); err != nil {
+				log.Printf("❌ Write failed: %v", err)
+			} else {
+				d.Ack(false)
+			}
 		}
+		log.Println("✅ 消息通道已关闭，消费者协程退出")
 	}()
 
-	// 优雅退出
+	// 8. 优雅退出
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan 	// 阻塞等待信号
-	log.Println("Shutting down CDC consumer")
+	<-sigChan // 阻塞等待信号
+
+	log.Println("\n⚠️  收到退出信号，正在停止 Consumer...")
+
+	// Step A: 停止接收新消息
+	// 告诉 RabbitMQ：这个消费者下班了，别再发新消息过来
+	// 这会导致 msgs 通道被关闭，从而让上面的 for 循环结束
+	if err := ch.Cancel(ConsumerTag, false); err != nil {
+		log.Printf("Error cancelling consumer: %s", err)
+	}
+
+	// Step B: 等待当前消息处理完
+	log.Println("⏳ 等待现有消息处理完毕...")
+	wg.Wait()
+
+	// Step C: 资源清理
+	log.Println("💾 正在刷盘日志文件...")
+	logFile.Sync() // 强制落盘
+	logFile.Close()
+
+	ch.Close()
+	conn.Close()
+	log.Println("👋 CDC Consumer 安全退出")
 }
 
-func processEvent(f *os.File, e Event, t time.Time) {
+func processEvent(f *os.File, e Event, t time.Time) error {
 	timeStr := t.Format(time.RFC3339)
 	var logLine string
 
@@ -139,9 +169,10 @@ func processEvent(f *os.File, e Event, t time.Time) {
 
 	// 写入日志文件
 	if _, err := f.WriteString(logLine); err != nil {
-		log.Printf("Error writing to file: %v", err)
+		return err
 	}
-	fmt.Print(logLine)	// 同时打印到控制台
+	fmt.Print(logLine) // 同时打印到控制台
+	return nil
 }
 
 func failOnError(err error, msg string) {

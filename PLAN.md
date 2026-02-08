@@ -57,7 +57,7 @@
 
 [x] Day 23: [架构模式] CDC 数据变更流 (Change Data Capture) —— 改造 Set/Del 操作，在落盘后异步分发变更事件，实现 "Fire-and-Forget" 模式，确保主流程低延迟。 ✅
 
-[ ] Day 24: [可靠性] 优雅启停 (Graceful Shutdown) —— 完善 KV Server 端的退出逻辑，确保 AOF 缓冲区刷盘、RabbitMQ 连接安全关闭，防止数据丢失。
+[x] Day 24: [可靠性] 优雅启停 (Graceful Shutdown) —— 完善 KV Server 端的退出逻辑，确保 AOF 缓冲区刷盘、RabbitMQ 连接安全关闭，防止数据丢失。 ✅
 
 [ ] Day 25: [容器化] Docker Compose 集群编排 —— 编写多阶段构建 Dockerfile，一键拉起 Etcd, RabbitMQ, Jaeger, KV-Nodes(x3), Gateway 完整环境。
 
