@@ -6,6 +6,65 @@
 
 ## 🚀 功能特性
 
+### 🏗️ 系统架构
+
+```mermaid
+graph TD
+    Client[Client / SDK] -->|HTTP/gRPC| Gateway[Flux Gateway]
+    
+    subgraph Service Discovery
+        Etcd[Etcd Registry]
+    end
+    
+    Gateway -- Resolve --> Etcd
+    KVNodes -- Register --> Etcd
+    
+    subgraph Data Plane
+        Gateway -->|Load Balance| KVNodes[KV Server Cluster]
+        KVNodes -->|RWMutex| Shards[Sharded MemDB]
+        KVNodes -->|File IO| AOF[AOF Persistence]
+    end
+    
+    subgraph Event Driven Architecture
+        KVNodes -.->|Async| MQ[RabbitMQ]
+        MQ --> Consumer[CDC Consumer]
+    end
+```
+
+### 🛣️ 核心写流程 (Set Sequence)
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant G as Gateway
+    participant S as KV Server
+    participant DB as MemDB (Sharded)
+    participant MQ as RabbitMQ
+    
+    C->>G: POST /api/v1/kv (Set)
+    G->>G: Global Rate Limit / Auth
+    G->>S: gRPC Set(Key, Value)
+    S->>S: Circuit Breaker Check
+    
+    rect rgb(200, 255, 200)
+        note right of S: Write Critical Path
+        S->>DB: Lock Shard(Key)
+        DB-->>S: Locked
+        S->>DB: Update Map
+        S->>DB: Unlock Shard
+    end
+    
+    S->>S: Async Append AOF
+    S-->>G: Returns Success
+    G-->>C: 200 OK
+    
+    rect rgb(240, 240, 240)
+        note right of S: CDC Async Flow
+        S-)MQ: Publish Event (Key, Value, Op)
+        MQ-)Consumer: Consume Message
+    end
+```
+
 ### 分布式 KV 存储
 - **高性能存储**: 
   - [x] 基于 sync.RWMutex 的基础存储
@@ -87,7 +146,11 @@ docker logs -f flux-cdc-consumer
 
 详细的压测数据和分析报告请参阅 [性能测试报告](PERFORMANCE.md)。
 
-## 📝 目录结构
+## � 接口文档
+
+详细的 API 接口定义、参数说明和错误码请参阅 [API 参考文档](docs/API.md)。
+
+## �📝 目录结构
 ```
 ├── api/            # IDL 定义 (Proto/gRPC)
 ├── cmd/            # 程序入口 (Gateway, Server, Client)
