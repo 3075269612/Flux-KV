@@ -58,7 +58,7 @@ graph TD
 ### 核心接口设计
 
 ```go
-// internal/proxy/router.go
+// internal/proxy/router.go (新增文件)
 package proxy
 
 import (
@@ -226,6 +226,8 @@ graph TD
 | 修改 | `configs/config.yaml` | 新增 Raft 相关配置 |
 | 新增 | `go.mod` | 添加 `github.com/hashicorp/raft` 依赖 |
 
+> **AOF 与 Raft WAL 的关系**：引入 Raft 后，Raft WAL (Write-Ahead Log) 完全替代 AOF 作为持久化日志。AOF 模块可以保留但在 Raft 模式下禁用 (通过配置开关)，避免重复写盘。数据恢复流程也从 "重放 AOF" 变为 "重放 Raft WAL + 加载快照"。
+
 ### 核心代码框架
 
 ```go
@@ -266,7 +268,7 @@ func (f *FSM) Apply(log *hraft.Log) interface{} {
     
     switch cmd.Op {
     case "set":
-        f.db.Set(cmd.Key, cmd.Value, 0) // Raft Apply 时不再重复写 AOF
+        f.db.Set(cmd.Key, cmd.Value, 0) // Raft Apply 时不再写 AOF，Raft WAL 替代 AOF 作为持久化日志
     case "del":
         f.db.Del(cmd.Key)
     }
