@@ -34,6 +34,17 @@
 1. **ShardedMap 效果显著**: 在 Profile 图中，`sync.Mutex` 或 `RWMutex` 的等待时间并没有出现在 Top 耗时中（或者占比很低）。这证明 `ShardedMap` (256 分片) 极大地稀释了锁竞争，让多核 CPU 能够跑满业务逻辑。
 2. **Syscall 开销**: 大量的 CPU 时间消耗在 `syscall.Write` (网络 IO) 和 `runtime.mallocgc` (内存分配) 上，这是高吞吐系统的正常表现。
 
+### 3.3 本地复现实测 (2026-03-05)
+
+单次结果会受机器瞬时负载影响，因此补充了多轮基线数据：
+
+| 场景 | 并发 | 总请求 | 结果 |
+| :--- | :---: | :---: | :--- |
+| CDC Disabled (3 runs) | 100 | 500,000 | `40,975 ~ 43,962 QPS`，均值 `42,515 QPS`，峰值 `43,962 QPS` |
+| CDC Enabled (single run) | 100 | 500,000 | `29,465 QPS` |
+
+> 以均值口径计算，CDC 性能损耗约 `30.69%`；以峰值口径（43,962 -> 29,465）计算，损耗约 `32.98%`。建议面试中同时说明“峰值 + 稳定区间”，表达更完整。
+
 ## 4. 复现步骤 (How to Reproduce)
 
 ### 4.1 启动基础组件
@@ -52,18 +63,43 @@ go build -o bin/benchmark cmd/benchmark/main.go
 export FLUX_PPROF_ENABLED=true
 export FLUX_RABBITMQ_URL="amqp://fluxadmin:flux2026secure@localhost:5672/"
 export FLUX_POD_IP=127.0.0.1
+export FLUX_AOF_FILENAME="$PWD/data/bench_cdc_on.aof"
 ./bin/flux-server
 ```
 
-### 4.4 运行压测
+### 4.4 运行压测并采集 CPU Profile (CDC Enabled)
 ```bash
 ./bin/benchmark -c 100 -n 500000
+# 另开一个终端，在压测进行期间抓取 12s CPU profile
+curl -sS "http://127.0.0.1:6060/debug/pprof/profile?seconds=12" -o cpu_cdc_on.prof
 ```
 
-### 4.5 查看 Pprof
+### 4.5 运行 Server (CDC Disabled 基线)
 ```bash
+export FLUX_PPROF_ENABLED=true
+export FLUX_POD_IP=127.0.0.1
+export FLUX_AOF_FILENAME="$PWD/data/bench_cdc_off.aof"
+# 使用不可达的 MQ 地址，让 EventBus 在启动时降级为关闭状态
+export FLUX_RABBITMQ_URL="amqp://fluxadmin:flux2026secure@localhost:5673/"
+./bin/flux-server
+```
+
+### 4.6 运行压测并采集 CPU Profile (CDC Disabled)
+```bash
+./bin/benchmark -c 100 -n 500000
+curl -sS "http://127.0.0.1:6060/debug/pprof/profile?seconds=12" -o cpu_cdc_off.prof
+```
+
+### 4.7 查看 Pprof
+```bash
+go tool pprof -top cpu_cdc_on.prof
+go tool pprof -top cpu_cdc_off.prof
 go tool pprof -http=:8080 cpu_cdc_on.prof
 ```
+
+### 4.8 常见坑位
+- 本地直接运行时，`FLUX_AOF_FILENAME` 必须指向本地可写路径；默认 `/app/data/...` 是容器路径。
+- 如果 CDC 场景吞吐异常低（例如只有几千 QPS），先检查是否存在每条消息都打印成功日志的代码路径；日志 I/O 会显著污染基准结果。
 
 ## 5. 面试话术 (Interview Talking Points)
 - "在压测中，我发现开启 CDC 对写性能有约 20% 的损耗。为了解决这个问题，我最初考虑过完全异步（Fire-and-Forget），但这可能导致消息丢失。目前的方案是在 Handler 层直接投递到带缓冲的 Channel，平衡了性能和可靠性。"

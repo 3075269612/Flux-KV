@@ -32,8 +32,8 @@ type EventBus struct {
 	rabbitConn   *amqp.Connection
 	rabbitCh     *amqp.Channel
 	exchangeName string
-	mu           sync.Mutex // 保护日志输出的同步
-	wg           sync.WaitGroup	// 等待消费者协程结束
+	mu           sync.Mutex     // 保护日志输出的同步
+	wg           sync.WaitGroup // 等待消费者协程结束
 }
 
 // NewEventBus 初始化传送带
@@ -119,8 +119,6 @@ func (b *EventBus) StartConsumer() {
 
 			if err != nil {
 				log.Printf("❌ [RabbitMQ] Publish failed: %v", err)
-			} else {
-				log.Printf("✅ [RabbitMQ] Pushed: %s %s", opStr(e.Type), e.Key)
 			}
 		}
 		log.Println("[EventBus] Internal consumer stopped.")
