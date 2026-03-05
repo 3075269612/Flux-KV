@@ -130,7 +130,12 @@ docker-compose ps
 ### 3. 操作验证
 ```bash
 # 写入数据 (HTTP -> Gateway -> KV Node)
-curl -X POST -d "key=hello&value=world" http://localhost:8080/api/v1/kv
+curl -X POST http://localhost:8080/api/v1/kv \
+  -H "Content-Type: application/json" \
+  -d '{"key":"hello","value":"world"}'
+
+# 读取数据
+curl "http://localhost:8080/api/v1/kv?key=hello"
 
 # 验证 CDC 异步日志
 docker logs -f flux-cdc-consumer
